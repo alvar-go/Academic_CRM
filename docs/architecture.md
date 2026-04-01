@@ -9,6 +9,7 @@ Build a modular Academic CRM that centralizes applicant tracking and advising op
 - FastAPI exposes JSON endpoints under `/api`.
 - SQLite stores local operational data and is bootstrapped from `database/migrations` and `database/seeds`.
 - FastAPI serves the frontend directly, so the UI and API can run as one deployable unit.
+- The frontend shell is route-aware, with dedicated module URLs such as `/configuration` and `/applicants`.
 
 ## Bounded Areas
 

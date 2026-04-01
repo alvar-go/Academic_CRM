@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Google+Sans+Code:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/styles/main.css" />
@@ -17,90 +17,149 @@
     <div class="ambient ambient-right"></div>
 
     <main class="shell">
+      <header class="topbar">
+        <a class="brand-lockup" href="/">
+          <span class="brand-name">Academic CRM</span>
+          <span class="brand-note">Modular admissions workspace</span>
+        </a>
+
+        <nav class="module-nav" aria-label="Primary navigation">
+          <a class="module-link" href="/" data-route-link="/">Overview</a>
+          <a
+            class="module-link"
+            href="/configuration"
+            data-route-link="/configuration"
+          >
+            Configuration
+          </a>
+          <a class="module-link" href="/applicants" data-route-link="/applicants">Applicants</a>
+        </nav>
+      </header>
+
       <section class="hero">
-        <div class="eyebrow">Academic CRM</div>
-        <h1>Admissions, advising and follow-up in one operational workspace.</h1>
-        <p class="hero-copy">
-          A lightweight CRM foundation for academic teams that need applicant visibility,
-          active advising queues and fast operational context without extra infrastructure.
-        </p>
+        <div class="eyebrow" id="route-eyebrow"></div>
+        <h1 id="route-title"></h1>
+        <p class="hero-copy" id="route-copy"></p>
       </section>
 
-      <section class="stats" id="stats"></section>
+      <section class="design-foundation" data-route-section="configuration">
+        <article class="panel design-overview" id="design-overview"></article>
+        <aside class="panel design-configurator" id="design-configurator"></aside>
+      </section>
 
-      <section class="content-grid">
-        <article class="panel">
+      <section class="stats" id="stats" data-route-section="overview applicants"></section>
+
+      <section class="applicants-module" data-route-section="applicants">
+        <article class="panel applicants-shell">
           <div class="panel-header">
             <div>
-              <span class="panel-kicker">Pipeline</span>
-              <h2>Applicants</h2>
+              <span class="panel-kicker">Applicants Module</span>
+              <h2>Admissions Pipeline</h2>
             </div>
             <button class="ghost-button" id="refresh-applicants" type="button">Refresh</button>
           </div>
-          <div class="table-shell">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Program</th>
-                  <th>Status</th>
-                  <th>Stage</th>
-                  <th>Score</th>
-                </tr>
-              </thead>
-              <tbody id="applicants-table"></tbody>
-            </table>
+
+          <div class="toolbar-grid">
+            <label class="field">
+              Search applicants
+              <input
+                id="applicant-search"
+                type="text"
+                placeholder="Search by name, email or program"
+              />
+            </label>
+            <label class="field">
+              Filter by stage
+              <select id="applicant-stage-filter">
+                <option value="all">All stages</option>
+                <option value="Document Review">Document Review</option>
+                <option value="Interview">Interview</option>
+                <option value="Committee">Committee</option>
+              </select>
+            </label>
+            <label class="field">
+              Filter by status
+              <select id="applicant-status-filter">
+                <option value="all">All statuses</option>
+                <option value="In Review">In Review</option>
+                <option value="Offer Ready">Offer Ready</option>
+                <option value="Awaiting Documents">Awaiting Documents</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="applicant-summary-row" id="applicant-summary"></div>
+
+          <div class="applicants-workbench">
+            <div class="applicant-list-column">
+              <div class="section-caption">Applicant Queue</div>
+              <div class="applicant-list" id="applicants-list"></div>
+            </div>
+
+            <aside class="applicant-sidebar">
+              <article class="subpanel spotlight-panel" id="applicant-spotlight"></article>
+
+              <article class="subpanel panel-form">
+                <div class="panel-header">
+                  <div>
+                    <span class="panel-kicker">Capture</span>
+                    <h2>New applicant</h2>
+                  </div>
+                </div>
+
+                <form id="applicant-form" class="form-grid">
+                  <label>
+                    Full name
+                    <input name="full_name" type="text" placeholder="Laura Rios" required />
+                  </label>
+                  <label>
+                    Email
+                    <input name="email" type="email" placeholder="laura.rios@example.edu" required />
+                  </label>
+                  <label>
+                    Program
+                    <input name="program" type="text" placeholder="MBA" required />
+                  </label>
+                  <label>
+                    Status
+                    <select name="status">
+                      <option>In Review</option>
+                      <option>Offer Ready</option>
+                      <option>Awaiting Documents</option>
+                    </select>
+                  </label>
+                  <label>
+                    Stage
+                    <select name="stage">
+                      <option>Document Review</option>
+                      <option>Interview</option>
+                      <option>Committee</option>
+                    </select>
+                  </label>
+                  <label>
+                    Score
+                    <input name="score" type="number" min="0" max="100" value="85" required />
+                  </label>
+                  <button class="primary-button" type="submit">Create applicant</button>
+                </form>
+                <p id="form-message" class="form-message" aria-live="polite"></p>
+              </article>
+            </aside>
           </div>
         </article>
 
-        <article class="panel panel-form">
+        <article class="panel applicants-pipeline-shell">
           <div class="panel-header">
             <div>
-              <span class="panel-kicker">Capture</span>
-              <h2>New applicant</h2>
+              <span class="panel-kicker">Stage View</span>
+              <h2>Pipeline by Stage</h2>
             </div>
           </div>
-
-          <form id="applicant-form" class="form-grid">
-            <label>
-              Full name
-              <input name="full_name" type="text" placeholder="Laura Rios" required />
-            </label>
-            <label>
-              Email
-              <input name="email" type="email" placeholder="laura.rios@example.edu" required />
-            </label>
-            <label>
-              Program
-              <input name="program" type="text" placeholder="MBA" required />
-            </label>
-            <label>
-              Status
-              <select name="status">
-                <option>In Review</option>
-                <option>Offer Ready</option>
-                <option>Awaiting Documents</option>
-              </select>
-            </label>
-            <label>
-              Stage
-              <select name="stage">
-                <option>Document Review</option>
-                <option>Interview</option>
-                <option>Committee</option>
-              </select>
-            </label>
-            <label>
-              Score
-              <input name="score" type="number" min="0" max="100" value="85" required />
-            </label>
-            <button class="primary-button" type="submit">Create applicant</button>
-          </form>
-          <p id="form-message" class="form-message" aria-live="polite"></p>
+          <div class="pipeline-board" id="applicant-pipeline"></div>
         </article>
       </section>
 
-      <section class="panel">
+      <section class="panel" data-route-section="overview">
         <div class="panel-header">
           <div>
             <span class="panel-kicker">Advising</span>

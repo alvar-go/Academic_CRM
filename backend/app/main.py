@@ -32,5 +32,7 @@ app.mount("/public", StaticFiles(directory=PUBLIC_DIR), name="public")
 
 
 @app.get("/", include_in_schema=False)
+@app.get("/configuration", include_in_schema=False)
+@app.get("/applicants", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
