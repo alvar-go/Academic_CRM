@@ -26,6 +26,7 @@ def test_frontend_shell_loads() -> None:
     assert 'id="applicant-search"' in response.text
     assert 'id="applicants-list"' in response.text
     assert 'id="applicant-pipeline"' in response.text
+    assert 'id="pipeline-studio"' in response.text
 
 
 def test_module_routes_load() -> None:
@@ -36,6 +37,7 @@ def test_module_routes_load() -> None:
     assert applicants_response.status_code == 200
     assert 'id="route-title"' in configuration_response.text
     assert 'id="route-title"' in applicants_response.text
+    assert 'id="pipeline-studio"' in applicants_response.text
 
 
 def test_dashboard_returns_seeded_content() -> None:

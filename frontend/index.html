@@ -10,6 +10,10 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Google+Sans+Code:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
     <link rel="stylesheet" href="/static/styles/main.css" />
   </head>
   <body>
@@ -71,10 +75,7 @@
             <label class="field">
               Filter by stage
               <select id="applicant-stage-filter">
-                <option value="all">All stages</option>
-                <option value="Document Review">Document Review</option>
-                <option value="Interview">Interview</option>
-                <option value="Committee">Committee</option>
+                <option value="all">All stage families</option>
               </select>
             </label>
             <label class="field">
@@ -131,9 +132,7 @@
                   <label>
                     Stage
                     <select name="stage">
-                      <option>Document Review</option>
-                      <option>Interview</option>
-                      <option>Committee</option>
+                      <option>Configure a stage node first</option>
                     </select>
                   </label>
                   <label>
@@ -151,11 +150,16 @@
         <article class="panel applicants-pipeline-shell">
           <div class="panel-header">
             <div>
-              <span class="panel-kicker">Stage View</span>
-              <h2>Pipeline by Stage</h2>
+              <span class="panel-kicker">Pipeline Graph</span>
+              <h2>Applicants Flow Studio</h2>
             </div>
           </div>
+          <p class="control-note">
+            Applicants should not move through a fixed list. This view treats the pipeline as a graph
+            with configurable stages, sub-stages and rule-based transitions.
+          </p>
           <div class="pipeline-board" id="applicant-pipeline"></div>
+          <div class="pipeline-studio-row" id="pipeline-studio"></div>
         </article>
       </section>
 
