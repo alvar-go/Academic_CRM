@@ -2,31 +2,20 @@
 
 ## Goal
 
-Build a modular Academic CRM that can centralize student, applicant, academic, and communication workflows in a single repository.
+Build a modular Academic CRM that centralizes applicant tracking and advising operations in a single local-first repository.
 
-## Core Areas
+## Current Runtime Design
 
-- `backend/` should expose domain-oriented services and API endpoints.
-- `frontend/` should provide operational screens for admissions, student tracking, and reporting.
-- `database/` should keep schema evolution and initialization assets.
-- `shared/` should hold reusable contracts, dictionaries, and documentation that apply to more than one layer.
+- FastAPI exposes JSON endpoints under `/api`.
+- SQLite stores local operational data and is bootstrapped from `database/migrations` and `database/seeds`.
+- FastAPI serves the frontend directly, so the UI and API can run as one deployable unit.
 
-## Suggested Backend Modules
+## Bounded Areas
 
-- `admissions`
-- `students`
-- `academics`
-- `communications`
-- `reporting`
+- `applicants`: admissions pipeline and review status
+- `advising_tasks`: operational follow-up for active students
+- `dashboard`: roll-up metrics for admissions and advising teams
 
-## Suggested Frontend Areas
+## Design Principle
 
-- `dashboard`
-- `applicants`
-- `students`
-- `workflows`
-- `reports`
-
-## Initial Principle
-
-Prefer clear domain boundaries from the start so the repository can grow without mixing UI, business rules, and data concerns.
+Keep infrastructure minimal while preserving separation between API, persistence, and UI so the project can later swap SQLite for PostgreSQL or a build-less frontend for React if Node becomes available.

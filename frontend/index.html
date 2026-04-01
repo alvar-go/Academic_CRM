@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Academic CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles/main.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <main class="shell">
+      <section class="hero">
+        <div class="eyebrow">Academic CRM</div>
+        <h1>Admissions, advising and follow-up in one operational workspace.</h1>
+        <p class="hero-copy">
+          A lightweight CRM foundation for academic teams that need applicant visibility,
+          active advising queues and fast operational context without extra infrastructure.
+        </p>
+      </section>
+
+      <section class="stats" id="stats"></section>
+
+      <section class="content-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Pipeline</span>
+              <h2>Applicants</h2>
+            </div>
+            <button class="ghost-button" id="refresh-applicants" type="button">Refresh</button>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Program</th>
+                  <th>Status</th>
+                  <th>Stage</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="applicants-table"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel panel-form">
+          <div class="panel-header">
+            <div>
+              <span class="panel-kicker">Capture</span>
+              <h2>New applicant</h2>
+            </div>
+          </div>
+
+          <form id="applicant-form" class="form-grid">
+            <label>
+              Full name
+              <input name="full_name" type="text" placeholder="Laura Rios" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" placeholder="laura.rios@example.edu" required />
+            </label>
+            <label>
+              Program
+              <input name="program" type="text" placeholder="MBA" required />
+            </label>
+            <label>
+              Status
+              <select name="status">
+                <option>In Review</option>
+                <option>Offer Ready</option>
+                <option>Awaiting Documents</option>
+              </select>
+            </label>
+            <label>
+              Stage
+              <select name="stage">
+                <option>Document Review</option>
+                <option>Interview</option>
+                <option>Committee</option>
+              </select>
+            </label>
+            <label>
+              Score
+              <input name="score" type="number" min="0" max="100" value="85" required />
+            </label>
+            <button class="primary-button" type="submit">Create applicant</button>
+          </form>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="panel-kicker">Advising</span>
+            <h2>Open tasks</h2>
+          </div>
+        </div>
+        <div class="task-list" id="tasks-list"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/static/main.js"></script>
+  </body>
+</html>
