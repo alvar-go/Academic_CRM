@@ -67,6 +67,8 @@ Default base palette:
 The frontend configuration module is responsible for:
 
 - theme presets
+- light, dark and system color mode
+- locale selection
 - typography selections
 - runtime CSS variable application
 - user overrides persisted in local storage
@@ -74,3 +76,29 @@ The frontend configuration module is responsible for:
 Business modules should consume semantic tokens and should never introduce fixed brand colors directly.
 
 Buttons should stay flat and clear. The default action style uses solid fills and restrained borders instead of heavy gradients.
+
+## Dark Mode
+
+Dark mode should not be treated as a separate stylesheet. The design layer should resolve semantic tokens for `light`, `dark` or `system`, and business modules should continue consuming the same token names.
+
+That means the implementation target is:
+
+- one semantic token contract
+- multiple resolved palettes by mode
+- no hardcoded light-only fills inside feature modules
+
+## I18n
+
+The shell is now expected to support internationalization from the foundation layer upward.
+
+Current target:
+
+- `en`
+- `es`
+
+Implementation direction:
+
+- UI copy should come from message catalogs, not hardcoded component strings
+- locale state should be persisted independently of business data
+- domain values may keep stable internal codes while display labels are localized at render time
+- the structure should stay open so more locales can be added without rewriting modules

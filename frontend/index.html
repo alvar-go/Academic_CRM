@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Google+Sans+Code:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Google+Sans+Code:wght@300;400;500;700&family=IBM+Plex+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800&family=Sora:wght@300;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link
@@ -20,25 +20,99 @@
     <div class="ambient ambient-left"></div>
     <div class="ambient ambient-right"></div>
 
-    <main class="shell">
-      <header class="topbar">
-        <a class="brand-lockup" href="/">
-          <span class="brand-name">Academic CRM</span>
-          <span class="brand-note">Modular admissions workspace</span>
-        </a>
+    <header class="app-chrome">
+      <div class="topbar-shell topbar-primary-row">
+        <div class="topbar topbar-main">
+          <div class="topbar-branding">
+            <a class="brand-lockup" href="/">
+              <span class="brand-logo-slot" aria-hidden="true">
+                <i class="bi bi-grid-1x2" aria-hidden="true"></i>
+              </span>
+              <span class="brand-copy">
+                <span class="brand-name">Academic CRM</span>
+                <span class="brand-note" data-i18n="shell.brand.note">Modular admissions workspace</span>
+              </span>
+            </a>
 
-        <nav class="module-nav" aria-label="Primary navigation">
-          <a class="module-link" href="/" data-route-link="/">Overview</a>
+            <div class="tenant-lockup" data-i18n-aria-label="shell.tenant.aria">
+              <span class="tenant-logo-slot" aria-hidden="true">
+                <i class="bi bi-building" aria-hidden="true"></i>
+              </span>
+              <span class="tenant-copy">
+                <span class="tenant-label" data-i18n="shell.tenant.label">Company space</span>
+                <strong data-i18n="shell.tenant.placeholder">Tenant Brand</strong>
+              </span>
+            </div>
+          </div>
+
+          <label class="topbar-search" data-i18n-aria-label="shell.search.aria">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              type="search"
+              data-i18n-placeholder="shell.search.placeholder"
+              placeholder="Search applicants, modules, tasks"
+            />
+          </label>
+
+          <div class="topbar-actions">
+            <details class="session-menu">
+              <summary class="session-chip">
+                <span class="session-avatar" aria-hidden="true">WY</span>
+                <span class="session-copy">
+                  <small data-i18n="shell.session.label">Active session</small>
+                  <strong data-i18n="shell.session.role">Admissions Analyst</strong>
+                </span>
+                <span class="session-caret" aria-hidden="true">
+                  <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </span>
+              </summary>
+
+              <div
+                class="session-dropdown"
+                role="menu"
+                data-i18n-aria-label="shell.session.actions"
+              >
+                <button class="ghost-button dropdown-item" type="button" data-toggle-module-bar>
+                  <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                  <span data-module-bar-label>Hide module bar</span>
+                </button>
+                <button class="ghost-button dropdown-item" type="button">
+                  <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                  <span data-i18n="shell.actions.loginAsAnotherUser">Login as another user</span>
+                </button>
+                <button class="ghost-button dropdown-item" type="button">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                  <span data-i18n="shell.actions.logout">Logout</span>
+                </button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-shell topbar-nav-row">
+        <nav class="module-nav" data-i18n-aria-label="nav.primary">
+          <a class="module-link" href="/" data-route-link="/">
+            <i class="bi bi-house-door" aria-hidden="true"></i>
+            <span data-i18n="nav.overview">Overview</span>
+          </a>
           <a
             class="module-link"
             href="/configuration"
             data-route-link="/configuration"
           >
-            Configuration
+            <i class="bi bi-sliders2" aria-hidden="true"></i>
+            <span data-i18n="nav.configuration">Configuration</span>
           </a>
-          <a class="module-link" href="/applicants" data-route-link="/applicants">Applicants</a>
+          <a class="module-link" href="/applicants" data-route-link="/applicants">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <span data-i18n="nav.applicants">Applicants</span>
+          </a>
         </nav>
-      </header>
+      </div>
+    </header>
+
+    <main class="shell">
 
       <section class="hero">
         <div class="eyebrow" id="route-eyebrow"></div>
@@ -57,29 +131,33 @@
         <article class="panel applicants-shell">
           <div class="panel-header">
             <div>
-              <span class="panel-kicker">Applicants Module</span>
-              <h2>Admissions Pipeline</h2>
+              <span class="panel-kicker" data-i18n="applicants.module.kicker">Applicants Module</span>
+              <h2 data-i18n="applicants.module.title">Admissions Pipeline</h2>
             </div>
-            <button class="ghost-button" id="refresh-applicants" type="button">Refresh</button>
+            <button class="ghost-button" id="refresh-applicants" type="button">
+              <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+              <span data-i18n="applicants.actions.refresh">Refresh</span>
+            </button>
           </div>
 
           <div class="toolbar-grid">
             <label class="field">
-              Search applicants
+              <span data-i18n="applicants.controls.searchLabel">Search applicants</span>
               <input
                 id="applicant-search"
                 type="text"
+                data-i18n-placeholder="applicants.controls.searchPlaceholder"
                 placeholder="Search by name, email or program"
               />
             </label>
             <label class="field">
-              Filter by stage
+              <span data-i18n="applicants.controls.stageFilterLabel">Filter by stage</span>
               <select id="applicant-stage-filter">
                 <option value="all">All stage families</option>
               </select>
             </label>
             <label class="field">
-              Filter by status
+              <span data-i18n="applicants.controls.statusFilterLabel">Filter by status</span>
               <select id="applicant-status-filter">
                 <option value="all">All statuses</option>
                 <option value="In Review">In Review</option>
@@ -93,7 +171,7 @@
 
           <div class="applicants-workbench">
             <div class="applicant-list-column">
-              <div class="section-caption">Applicant Queue</div>
+              <div class="section-caption" data-i18n="applicants.queue.title">Applicant Queue</div>
               <div class="applicant-list" id="applicants-list"></div>
             </div>
 
@@ -103,26 +181,44 @@
               <article class="subpanel panel-form">
                 <div class="panel-header">
                   <div>
-                    <span class="panel-kicker">Capture</span>
-                    <h2>New applicant</h2>
+                    <span class="panel-kicker" data-i18n="applicants.capture.kicker">Capture</span>
+                    <h2 data-i18n="applicants.capture.title">New applicant</h2>
                   </div>
                 </div>
 
                 <form id="applicant-form" class="form-grid">
                   <label>
-                    Full name
-                    <input name="full_name" type="text" placeholder="Laura Rios" required />
+                    <span data-i18n="applicants.capture.fullName">Full name</span>
+                    <input
+                      name="full_name"
+                      type="text"
+                      data-i18n-placeholder="applicants.capture.placeholder.fullName"
+                      placeholder="Laura Rios"
+                      required
+                    />
                   </label>
                   <label>
-                    Email
-                    <input name="email" type="email" placeholder="laura.rios@example.edu" required />
+                    <span data-i18n="applicants.capture.email">Email</span>
+                    <input
+                      name="email"
+                      type="email"
+                      data-i18n-placeholder="applicants.capture.placeholder.email"
+                      placeholder="laura.rios@example.edu"
+                      required
+                    />
                   </label>
                   <label>
-                    Program
-                    <input name="program" type="text" placeholder="MBA" required />
+                    <span data-i18n="applicants.capture.program">Program</span>
+                    <input
+                      name="program"
+                      type="text"
+                      data-i18n-placeholder="applicants.capture.placeholder.program"
+                      placeholder="MBA"
+                      required
+                    />
                   </label>
                   <label>
-                    Status
+                    <span data-i18n="applicants.capture.status">Status</span>
                     <select name="status">
                       <option>In Review</option>
                       <option>Offer Ready</option>
@@ -130,16 +226,19 @@
                     </select>
                   </label>
                   <label>
-                    Stage
+                    <span data-i18n="applicants.capture.stage">Stage</span>
                     <select name="stage">
                       <option>Configure a stage node first</option>
                     </select>
                   </label>
                   <label>
-                    Score
+                    <span data-i18n="applicants.capture.score">Score</span>
                     <input name="score" type="number" min="0" max="100" value="85" required />
                   </label>
-                  <button class="primary-button" type="submit">Create applicant</button>
+                  <button class="primary-button" type="submit">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    <span data-i18n="applicants.capture.submit">Create applicant</span>
+                  </button>
                 </form>
                 <p id="form-message" class="form-message" aria-live="polite"></p>
               </article>
@@ -150,11 +249,11 @@
         <article class="panel applicants-pipeline-shell">
           <div class="panel-header">
             <div>
-              <span class="panel-kicker">Pipeline Graph</span>
-              <h2>Applicants Flow Studio</h2>
+              <span class="panel-kicker" data-i18n="applicants.pipeline.kicker">Pipeline Graph</span>
+              <h2 data-i18n="applicants.pipeline.title">Applicants Flow Studio</h2>
             </div>
           </div>
-          <p class="control-note">
+          <p class="control-note" data-i18n="applicants.pipeline.intro">
             Applicants should not move through a fixed list. This view treats the pipeline as a graph
             with configurable stages, sub-stages and rule-based transitions.
           </p>
@@ -166,8 +265,8 @@
       <section class="panel" data-route-section="overview">
         <div class="panel-header">
           <div>
-            <span class="panel-kicker">Advising</span>
-            <h2>Open tasks</h2>
+            <span class="panel-kicker" data-i18n="dashboard.tasks.kicker">Advising</span>
+            <h2 data-i18n="dashboard.tasks.title">Open tasks</h2>
           </div>
         </div>
         <div class="task-list" id="tasks-list"></div>

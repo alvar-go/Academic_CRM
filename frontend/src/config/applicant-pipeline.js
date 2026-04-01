@@ -13,6 +13,20 @@ export const transitionDirectionCatalog = [
   { value: "lateral", label: "Lateral" },
 ];
 
+export function getNodeKindOptions(i18n) {
+  return nodeKindCatalog.map((item) => ({
+    value: item.value,
+    label: i18n.localizeNodeKind(item.value),
+  }));
+}
+
+export function getTransitionDirectionOptions(i18n) {
+  return transitionDirectionCatalog.map((item) => ({
+    value: item.value,
+    label: i18n.localizeDirection(item.value),
+  }));
+}
+
 const allowedNodeKinds = new Set(nodeKindCatalog.map((item) => item.value));
 const allowedTransitionDirections = new Set(
   transitionDirectionCatalog.map((item) => item.value)
@@ -224,6 +238,12 @@ function makeUniqueId(base, usedIds) {
   }
 
   return candidate;
+}
+
+function makePipelineError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
 }
 
 function sanitizeGraph(rawGraph) {
@@ -477,15 +497,11 @@ function resolveGraph(graphConfig) {
   const resolvedTransitions = safeGraph.transitions.map((transition) => {
     const fromNode = nodeMap.get(transition.from) ?? null;
     const toNode = nodeMap.get(transition.to) ?? null;
-    const directionLabel =
-      transitionDirectionCatalog.find((item) => item.value === transition.direction)?.label ??
-      transition.direction;
 
     return {
       ...transition,
       fromNode,
       toNode,
-      directionLabel,
     };
   });
 
@@ -660,7 +676,7 @@ export function addProgramPipeline(config, draft) {
     safeConfig.programs.find((program) => program.id === sourceProgramId) ?? safeConfig.programs[0];
 
   if (programName.length < 2) {
-    throw new Error("Program name must be at least 2 characters.");
+    throw makePipelineError("pipeline.errors.programNameTooShort");
   }
 
   const existingProgramKeys = new Set(
@@ -670,7 +686,7 @@ export function addProgramPipeline(config, draft) {
   );
 
   if (existingProgramKeys.has(programKey)) {
-    throw new Error("That program already has a specific flow version.");
+    throw makePipelineError("pipeline.errors.programExists");
   }
 
   const usedIds = new Set(safeConfig.programs.map((program) => program.id));
@@ -699,23 +715,23 @@ export function addPipelineNode(config, draft) {
     const parentId = sanitizeId(draft.parentId);
 
     if (label.length < 2) {
-      throw new Error("Stage label must be at least 2 characters.");
+      throw makePipelineError("pipeline.errors.stageLabelTooShort");
     }
 
     if (!allowedNodeKinds.has(kind)) {
-      throw new Error("Choose whether the new node is a stage or a sub-stage.");
+      throw makePipelineError("pipeline.errors.invalidNodeKind");
     }
 
     const existingLabels = new Set(safeConfig.nodes.map((node) => normalizeKey(node.label)));
     if (existingLabels.has(labelKey)) {
-      throw new Error("Stage labels must stay unique because they are used across the module.");
+      throw makePipelineError("pipeline.errors.duplicateStageLabel");
     }
 
     if (
       kind === "substage" &&
       !safeConfig.nodes.some((node) => node.id === parentId && node.kind === "stage")
     ) {
-      throw new Error("Sub-stages must point to an existing top-level stage.");
+      throw makePipelineError("pipeline.errors.invalidSubstageParent");
     }
 
     const usedIds = new Set(safeConfig.nodes.map((node) => node.id));
@@ -774,31 +790,31 @@ export function addPipelineTransition(config, draft) {
     const direction = normalizeText(draft.direction).toLowerCase();
 
     if (!from || !to) {
-      throw new Error("A rule needs both source and destination nodes.");
+      throw makePipelineError("pipeline.errors.ruleNeedsEndpoints");
     }
 
     if (from === to) {
-      throw new Error("Rules must point to a different destination node.");
+      throw makePipelineError("pipeline.errors.ruleSameDestination");
     }
 
     if (!safeConfig.nodes.some((node) => node.id === from)) {
-      throw new Error("The selected source node no longer exists.");
+      throw makePipelineError("pipeline.errors.ruleSourceMissing");
     }
 
     if (!safeConfig.nodes.some((node) => node.id === to)) {
-      throw new Error("The selected destination node no longer exists.");
+      throw makePipelineError("pipeline.errors.ruleDestinationMissing");
     }
 
     if (label.length < 2) {
-      throw new Error("Rule label must be at least 2 characters.");
+      throw makePipelineError("pipeline.errors.ruleLabelTooShort");
     }
 
     if (condition.length < 6) {
-      throw new Error("Describe the rule condition with a bit more detail.");
+      throw makePipelineError("pipeline.errors.ruleConditionTooShort");
     }
 
     if (!allowedTransitionDirections.has(direction)) {
-      throw new Error("Choose a valid transition direction.");
+      throw makePipelineError("pipeline.errors.invalidDirection");
     }
 
     const duplicate = safeConfig.transitions.some(
@@ -809,7 +825,7 @@ export function addPipelineTransition(config, draft) {
     );
 
     if (duplicate) {
-      throw new Error("A rule with the same source, destination and label already exists.");
+      throw makePipelineError("pipeline.errors.duplicateRule");
     }
 
     const usedIds = new Set(safeConfig.transitions.map((transition) => transition.id));

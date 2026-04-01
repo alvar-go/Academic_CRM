@@ -11,9 +11,11 @@ import {
 import { renderTaskCards } from "./pages/dashboard.js";
 import {
   applyDesignConfig,
+  isUsingSystemMode,
   getInitialDesignConfig,
   resetDesignConfig,
   saveDesignConfig,
+  subscribeToSystemColorScheme,
 } from "./config/design-system.js";
 import {
   addProgramPipeline,
@@ -28,6 +30,12 @@ import {
   saveApplicantPipelineConfig,
   setActiveProgramPipeline,
 } from "./config/applicant-pipeline.js";
+import {
+  createI18n,
+  getInitialLocalePreference,
+  getLocaleOptions,
+  saveLocalePreference,
+} from "./config/i18n.js";
 import { bindThemeStudio, renderThemeStudio } from "./components/themeStudio.js";
 
 const routeEyebrow = document.querySelector("#route-eyebrow");
@@ -35,11 +43,17 @@ const routeTitle = document.querySelector("#route-title");
 const routeCopy = document.querySelector("#route-copy");
 const routeLinks = Array.from(document.querySelectorAll("[data-route-link]"));
 const routeSections = Array.from(document.querySelectorAll("[data-route-section]"));
+const topbarNavRow = document.querySelector(".topbar-nav-row");
+const sessionMenu = document.querySelector(".session-menu");
+const moduleBarToggleButtons = Array.from(
+  document.querySelectorAll("[data-toggle-module-bar]")
+);
 const statsRoot = document.querySelector("#stats");
 const tasksRoot = document.querySelector("#tasks-list");
 const refreshButton = document.querySelector("#refresh-applicants");
 const applicantForm = document.querySelector("#applicant-form");
 const applicantProgramField = applicantForm?.elements.namedItem("program");
+const applicantStatusField = applicantForm?.elements.namedItem("status");
 const applicantStageField = applicantForm?.elements.namedItem("stage");
 const applicantSubmitButton = applicantForm?.querySelector('[type="submit"]');
 const formMessage = document.querySelector("#form-message");
@@ -53,42 +67,46 @@ const pipelineStudioRoot = document.querySelector("#pipeline-studio");
 const applicantSearchInput = document.querySelector("#applicant-search");
 const applicantStageFilter = document.querySelector("#applicant-stage-filter");
 const applicantStatusFilter = document.querySelector("#applicant-status-filter");
+const SHELL_PREFERENCES_KEY = "academic-crm-shell-preferences:v1";
 
 const ROUTES = {
   overview: {
     key: "overview",
     path: "/",
-    eyebrow: "Overview Module",
-    title: "Operational overview across admissions and advising.",
-    copy:
-      "Use this shell as the landing layer. Configuration and Applicants now live as first-class modules with their own URLs and navigation state.",
+    eyebrowKey: "routes.overview.eyebrow",
+    titleKey: "routes.overview.title",
+    copyKey: "routes.overview.copy",
     needsDashboard: true,
   },
   configuration: {
     key: "configuration",
     path: "/configuration",
-    eyebrow: "Configuration Module",
-    title: "Theme tokens, typography and visual defaults stay isolated.",
-    copy:
-      "This module owns palette, font selection and runtime presentation rules so business areas inherit visual decisions instead of redefining them.",
+    eyebrowKey: "routes.configuration.eyebrow",
+    titleKey: "routes.configuration.title",
+    copyKey: "routes.configuration.copy",
     needsDashboard: false,
   },
   applicants: {
     key: "applicants",
     path: "/applicants",
-    eyebrow: "Applicants Module",
-    title: "Admissions queue, graph rules and applicant capture.",
-    copy:
-      "Applicants move through a configurable graph, not a fixed list. Stages, sub-stages and rule-based transitions shape the shell before we persist the model in endpoints and schema.",
+    eyebrowKey: "routes.applicants.eyebrow",
+    titleKey: "routes.applicants.title",
+    copyKey: "routes.applicants.copy",
     needsDashboard: true,
   },
 };
 
 let designConfig = getInitialDesignConfig();
+let locale = getInitialLocalePreference();
+let i18n = createI18n(locale);
 let applicantPipelineConfig = getInitialApplicantPipelineConfig();
 let pipelineMessage = {
   tone: "muted",
-  text: "Configure the graph and the rest of the module will inherit it.",
+  key: "pipeline.messages.default",
+};
+let dashboardState = {
+  stats: [],
+  tasks: [],
 };
 let applicantsState = {
   items: [],
@@ -103,6 +121,27 @@ let pipelineViewState = {
   expandedStageIdsByProgram: {},
 };
 let dashboardLoaded = false;
+let shellPreferences = getInitialShellPreferences();
+
+function getInitialShellPreferences() {
+  try {
+    const savedPreferences = JSON.parse(
+      window.localStorage.getItem(SHELL_PREFERENCES_KEY) ?? "{}"
+    );
+
+    return {
+      hideModuleBar: Boolean(savedPreferences.hideModuleBar),
+    };
+  } catch {
+    return {
+      hideModuleBar: false,
+    };
+  }
+}
+
+function saveShellPreferences() {
+  window.localStorage.setItem(SHELL_PREFERENCES_KEY, JSON.stringify(shellPreferences));
+}
 
 function normalizePath(pathname) {
   if (!pathname || pathname === "/") {
@@ -136,6 +175,66 @@ function populateSelect(select, options) {
   }
 }
 
+function getApplicantStatusOptions({ includeAll = false } = {}) {
+  const options = [];
+
+  if (includeAll) {
+    options.push({
+      value: "all",
+      label: i18n.t("applicants.controls.allStatuses"),
+    });
+  }
+
+  options.push(
+    {
+      value: "In Review",
+      label: i18n.localizeApplicantStatus("In Review"),
+    },
+    {
+      value: "Offer Ready",
+      label: i18n.localizeApplicantStatus("Offer Ready"),
+    },
+    {
+      value: "Awaiting Documents",
+      label: i18n.localizeApplicantStatus("Awaiting Documents"),
+    }
+  );
+
+  return options;
+}
+
+function localizeMessage(error) {
+  if (!error) {
+    return i18n.t("app.status.requestFailed");
+  }
+
+  if (typeof error.code === "string") {
+    return i18n.t(error.code, {}, error.message ?? error.code);
+  }
+
+  if (typeof error.message === "string" && error.message.startsWith("pipeline.")) {
+    return i18n.t(error.message, {}, error.message);
+  }
+
+  return error.message ?? i18n.t("app.status.requestFailed");
+}
+
+function syncStaticTranslations() {
+  document.documentElement.lang = locale;
+
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    element.textContent = i18n.t(element.dataset.i18n);
+  }
+
+  for (const element of document.querySelectorAll("[data-i18n-placeholder]")) {
+    element.setAttribute("placeholder", i18n.t(element.dataset.i18nPlaceholder));
+  }
+
+  for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
+    element.setAttribute("aria-label", i18n.t(element.dataset.i18nAriaLabel));
+  }
+}
+
 function applyPipelineMessage() {
   const messageRoot = document.querySelector("#pipeline-config-message");
 
@@ -143,7 +242,7 @@ function applyPipelineMessage() {
     return;
   }
 
-  messageRoot.textContent = pipelineMessage.text;
+  messageRoot.textContent = i18n.t(pipelineMessage.key, pipelineMessage.values ?? {});
   messageRoot.dataset.tone = pipelineMessage.tone;
 }
 
@@ -181,6 +280,33 @@ function restorePipelineStudioOpenState(openState) {
   }
 }
 
+function syncShellChrome() {
+  const hideModuleBar = Boolean(shellPreferences.hideModuleBar);
+
+  if (topbarNavRow) {
+    topbarNavRow.hidden = hideModuleBar;
+  }
+
+  document.body.dataset.moduleNavHidden = hideModuleBar ? "true" : "false";
+
+  for (const button of moduleBarToggleButtons) {
+    const icon = button.querySelector("i");
+    const label = button.querySelector("[data-module-bar-label]");
+
+    if (icon) {
+      icon.className = `bi ${hideModuleBar ? "bi-eye" : "bi-eye-slash"}`;
+    }
+
+    if (label) {
+      label.textContent = hideModuleBar
+        ? i18n.t("shell.actions.showModuleBar")
+        : i18n.t("shell.actions.hideModuleBar");
+    }
+
+    button.setAttribute("aria-pressed", String(hideModuleBar));
+  }
+}
+
 function getExpandedStageIds(programId) {
   return new Set(pipelineViewState.expandedStageIdsByProgram[programId] ?? []);
 }
@@ -194,12 +320,15 @@ function setExpandedStageIds(programId, stageIds) {
 
 function syncRouteShell() {
   const activeRoute = getActiveRoute();
+  const eyebrow = i18n.t(activeRoute.eyebrowKey);
+  const title = i18n.t(activeRoute.titleKey);
+  const copy = i18n.t(activeRoute.copyKey);
 
-  document.title = `Academic CRM | ${activeRoute.eyebrow.replace(" Module", "")}`;
+  document.title = `Academic CRM | ${eyebrow.replace(/ Module$| Módulo$/, "")}`;
   document.body.dataset.route = activeRoute.key;
-  routeEyebrow.textContent = activeRoute.eyebrow;
-  routeTitle.textContent = activeRoute.title;
-  routeCopy.textContent = activeRoute.copy;
+  routeEyebrow.textContent = eyebrow;
+  routeTitle.textContent = title;
+  routeCopy.textContent = copy;
 
   for (const link of routeLinks) {
     const linkPath = normalizePath(link.getAttribute("href"));
@@ -223,10 +352,14 @@ function syncRouteShell() {
 
 function syncDesignSystem() {
   applyDesignConfig(designConfig);
+  syncStaticTranslations();
   renderThemeStudio({
     overviewRoot: designOverviewRoot,
     controlsRoot: designConfiguratorRoot,
     config: designConfig,
+    i18n,
+    locale,
+    localeOptions: getLocaleOptions(i18n),
   });
   saveDesignConfig(designConfig);
 }
@@ -237,7 +370,7 @@ function resolvePipeline() {
 
 function syncApplicantStageControls(pipeline) {
   const filterOptions = [
-    { value: "all", label: "All stage families" },
+    { value: "all", label: i18n.t("applicants.controls.allStageFamilies") },
     ...pipeline.stageFilterOptions,
   ];
   populateSelect(applicantStageFilter, filterOptions);
@@ -247,6 +380,20 @@ function syncApplicantStageControls(pipeline) {
   }
 
   applicantStageFilter.value = applicantsState.filters.stage;
+
+  if (applicantStatusFilter) {
+    populateSelect(applicantStatusFilter, getApplicantStatusOptions({ includeAll: true }));
+    applicantStatusFilter.value = applicantsState.filters.status;
+  }
+
+  if (applicantStatusField) {
+    const currentStatus = applicantStatusField.value;
+    const statusOptions = getApplicantStatusOptions();
+    populateSelect(applicantStatusField, statusOptions);
+    applicantStatusField.value = statusOptions.some((option) => option.value === currentStatus)
+      ? currentStatus
+      : statusOptions[0].value;
+  }
 
   const currentStageValue = applicantStageField?.value ?? "";
   const applicantStageOptions = pipeline.applicantStageOptions;
@@ -276,7 +423,7 @@ function syncApplicantStageControls(pipeline) {
     populateSelect(applicantStageField, [
       {
         value: "",
-        label: "Configure a stage node first",
+        label: i18n.t("applicants.capture.placeholder.stage"),
         disabled: true,
       },
     ]);
@@ -299,7 +446,7 @@ function syncPipelineStudio() {
   const pipeline = resolvePipeline();
   const shouldStayOpen = isPipelineStudioOpen();
 
-  renderApplicantPipelineStudio(pipelineStudioRoot, pipeline);
+  renderApplicantPipelineStudio(pipelineStudioRoot, pipeline, i18n);
   restorePipelineStudioOpenState(shouldStayOpen);
   syncApplicantStageControls(pipeline);
   applyPipelineMessage();
@@ -334,11 +481,18 @@ function syncApplicantsModule() {
     applicantSummaryRoot,
     scopedApplicants,
     filteredApplicants,
-    pipeline
+    pipeline,
+    i18n
   );
-  renderApplicantList(applicantsListRoot, filteredApplicants, applicantsState.selectedId, pipeline);
-  renderApplicantSpotlight(applicantSpotlightRoot, selectedApplicant, pipeline);
-  renderApplicantPipeline(applicantPipelineRoot, filteredApplicants, pipeline, {
+  renderApplicantList(
+    applicantsListRoot,
+    filteredApplicants,
+    applicantsState.selectedId,
+    pipeline,
+    i18n
+  );
+  renderApplicantSpotlight(applicantSpotlightRoot, selectedApplicant, pipeline, i18n);
+  renderApplicantPipeline(applicantPipelineRoot, filteredApplicants, pipeline, i18n, {
     expandedStageIds: validExpandedStageIds,
   });
   restoreOpenPipelineFamilyIds(openFamilyIds);
@@ -349,10 +503,19 @@ function updatePipelineConfig(nextConfig, messageText) {
   saveApplicantPipelineConfig(applicantPipelineConfig);
   pipelineMessage = {
     tone: "success",
-    text: messageText,
+    key: messageText,
   };
   syncPipelineStudio();
   syncApplicantsModule();
+}
+
+function syncDashboardContent() {
+  if (!dashboardLoaded) {
+    return;
+  }
+
+  renderStatCards(statsRoot, dashboardState.stats, i18n);
+  renderTaskCards(tasksRoot, dashboardState.tasks, i18n);
 }
 
 async function loadDashboard({ force = false } = {}) {
@@ -362,10 +525,14 @@ async function loadDashboard({ force = false } = {}) {
 
   const payload = await fetchDashboard();
 
-  renderStatCards(statsRoot, payload.stats);
+  dashboardState = {
+    stats: payload.stats,
+    tasks: payload.tasks,
+  };
+  renderStatCards(statsRoot, payload.stats, i18n);
   applicantsState.items = payload.applicants;
   syncApplicantsModule();
-  renderTaskCards(tasksRoot, payload.tasks);
+  renderTaskCards(tasksRoot, payload.tasks, i18n);
   dashboardLoaded = true;
 }
 
@@ -386,16 +553,16 @@ async function handleSubmit(event) {
     score: Number(formData.get("score")),
   };
 
-  formMessage.textContent = "Saving applicant...";
+  formMessage.textContent = i18n.t("app.status.savingApplicant");
 
   try {
     await createApplicant(payload);
     applicantForm.reset();
     syncApplicantStageControls(resolvePipeline());
-    formMessage.textContent = "Applicant created.";
+    formMessage.textContent = i18n.t("app.status.applicantCreated");
     await loadDashboard({ force: true });
   } catch (error) {
-    formMessage.textContent = error.message;
+    formMessage.textContent = localizeMessage(error);
   }
 }
 
@@ -416,7 +583,7 @@ function handlePipelineStudioSubmit(event) {
           programName: formData.get("program_name"),
           sourceProgramId: formData.get("source_program_id"),
         }),
-        "Program-specific flow version created."
+        "pipeline.messages.programCreated"
       );
       return;
     }
@@ -429,7 +596,7 @@ function handlePipelineStudioSubmit(event) {
           parentId: formData.get("parent_id"),
           description: formData.get("description"),
         }),
-        "Pipeline node added."
+        "pipeline.messages.nodeAdded"
       );
       return;
     }
@@ -443,13 +610,13 @@ function handlePipelineStudioSubmit(event) {
           direction: formData.get("direction"),
           condition: formData.get("condition"),
         }),
-        "Transition rule added."
+        "pipeline.messages.ruleAdded"
       );
     }
   } catch (error) {
     pipelineMessage = {
       tone: "error",
-      text: error.message,
+      key: error.code ?? error.message ?? "app.status.requestFailed",
     };
     applyPipelineMessage();
   }
@@ -462,14 +629,14 @@ function handlePipelineStudioClick(event) {
   const removeTransitionButton = event.target.closest("[data-pipeline-remove-transition]");
 
   if (resetButton) {
-    updatePipelineConfig(resetApplicantPipelineConfig(), "Pipeline graph reset to the default preset.");
+    updatePipelineConfig(resetApplicantPipelineConfig(), "pipeline.messages.graphReset");
     return;
   }
 
   if (selectProgramButton) {
     updatePipelineConfig(
       setActiveProgramPipeline(applicantPipelineConfig, selectProgramButton.dataset.pipelineSelectProgram),
-      "Flow version changed."
+      "pipeline.messages.versionChanged"
     );
     return;
   }
@@ -477,7 +644,7 @@ function handlePipelineStudioClick(event) {
   if (removeNodeButton) {
     updatePipelineConfig(
       removePipelineNode(applicantPipelineConfig, removeNodeButton.dataset.pipelineRemoveNode),
-      "Pipeline node removed."
+      "pipeline.messages.nodeRemoved"
     );
     return;
   }
@@ -488,7 +655,7 @@ function handlePipelineStudioClick(event) {
         applicantPipelineConfig,
         removeTransitionButton.dataset.pipelineRemoveTransition
       ),
-      "Transition rule removed."
+      "pipeline.messages.ruleRemoved"
     );
   }
 }
@@ -502,7 +669,7 @@ function handlePipelineProgramChange(event) {
 
   updatePipelineConfig(
     setActiveProgramPipeline(applicantPipelineConfig, select.value),
-    "Flow version changed."
+    "pipeline.messages.versionChanged"
   );
 }
 
@@ -548,7 +715,49 @@ function handleApplicantPipelineKeydown(event) {
   toggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 }
 
+function handleShellChromeClick(event) {
+  const moduleBarToggle = event.target.closest?.("[data-toggle-module-bar]");
+
+  if (moduleBarToggle) {
+    shellPreferences = {
+      ...shellPreferences,
+      hideModuleBar: !shellPreferences.hideModuleBar,
+    };
+    saveShellPreferences();
+    syncShellChrome();
+    sessionMenu?.removeAttribute("open");
+    return;
+  }
+
+  if (event.target.closest?.(".dropdown-item")) {
+    sessionMenu?.removeAttribute("open");
+    return;
+  }
+
+  if (sessionMenu?.open && !event.target.closest(".session-menu")) {
+    sessionMenu.removeAttribute("open");
+  }
+}
+
 bindThemeStudio(designConfiguratorRoot, {
+  onLocaleChange(value) {
+    locale = value;
+    i18n = createI18n(locale);
+    saveLocalePreference(locale);
+    syncDesignSystem();
+    syncShellChrome();
+    syncPipelineStudio();
+    syncApplicantsModule();
+    syncDashboardContent();
+    syncRouteShell();
+  },
+  onModeChange(value) {
+    designConfig = {
+      ...designConfig,
+      mode: value,
+    };
+    syncDesignSystem();
+  },
   onPresetChange(preset) {
     designConfig = {
       ...designConfig,
@@ -583,8 +792,15 @@ bindThemeStudio(designConfiguratorRoot, {
   },
 });
 
+subscribeToSystemColorScheme(() => {
+  if (isUsingSystemMode(designConfig)) {
+    syncDesignSystem();
+  }
+});
+
 syncDesignSystem();
 syncPipelineStudio();
+syncShellChrome();
 const activeRoute = syncRouteShell();
 refreshButton.addEventListener("click", reloadApplicants);
 applicantForm.addEventListener("submit", handleSubmit);
@@ -594,6 +810,7 @@ pipelineStudioRoot.addEventListener("change", handlePipelineProgramChange);
 applicantPipelineRoot.addEventListener("click", handleApplicantPipelineClick);
 applicantPipelineRoot.addEventListener("keydown", handleApplicantPipelineKeydown);
 applicantPipelineRoot.addEventListener("change", handlePipelineProgramChange);
+document.addEventListener("click", handleShellChromeClick);
 applicantSearchInput.addEventListener("input", (event) => {
   applicantsState.filters.search = event.target.value;
   syncApplicantsModule();
@@ -619,6 +836,6 @@ applicantsListRoot.addEventListener("click", (event) => {
 
 if (activeRoute.needsDashboard) {
   loadDashboard().catch((error) => {
-    formMessage.textContent = error.message;
+    formMessage.textContent = localizeMessage(error);
   });
 }

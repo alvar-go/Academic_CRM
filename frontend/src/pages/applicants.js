@@ -1,9 +1,24 @@
 import {
+  getNodeKindOptions,
   getPipelineNodeByStageValue,
+  getTransitionDirectionOptions,
   isApplicantInStageFilter,
-  nodeKindCatalog,
-  transitionDirectionCatalog,
 } from "../config/applicant-pipeline.js";
+
+let activeI18n = {
+  t: (_key, _values, fallback = "") => fallback,
+  formatDate: (value) => String(value),
+  formatNumber: (value) => String(value),
+  localizeApplicantStatus: (value) => value,
+  localizeDirection: (value) => value,
+  localizeNodeKind: (value) => value,
+};
+
+function setActiveI18n(i18n) {
+  if (i18n) {
+    activeI18n = i18n;
+  }
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -70,9 +85,9 @@ function formatStageLabel(stageValue, pipeline) {
 
 function renderTransitionBadge(transition) {
   return `
-    <span class="direction-pill direction-${escapeHtml(transition.direction)}">
+    <span class="direction-pill badge badge-sm direction-${escapeHtml(transition.direction)}">
       <i class="bi ${transitionIcon(transition.direction)}" aria-hidden="true"></i>
-      ${escapeHtml(transition.directionLabel)}
+      ${escapeHtml(activeI18n.localizeDirection(transition.direction))}
     </span>
   `;
 }
@@ -178,7 +193,9 @@ function summarizeEdgeLabel(transitions) {
     return compactText(transitions[0]?.label ?? "", 18);
   }
 
-  return `${transitions.length} rules`;
+  return activeI18n.t("pipeline.preview.rulesCount", {
+    count: activeI18n.formatNumber(transitions.length),
+  });
 }
 
 function laneOffset(index, total, spacing = 14) {
@@ -424,7 +441,7 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
         width="${scene.viewWidth}"
         height="${scene.viewHeight}"
         role="img"
-        aria-label="Applicants pipeline graph map"
+        aria-label="${escapeHtml(activeI18n.t("pipeline.preview.ariaLabel"))}"
       >
         <defs>
           <marker
@@ -451,7 +468,7 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
                     y="-12"
                     width="${edge.labelWidth}"
                     height="24"
-                    rx="12"
+                    rx="7"
                   ></rect>
                   <text y="4">${escapeHtml(edge.labelText)}</text>
                 </g>
@@ -463,7 +480,9 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
         ${scene.stageContainers
           .map((stage) => {
             const toggleY = stage.y + 90;
-            const toggleLabel = stage.isExpanded ? "Hide sub-stages" : "Show sub-stages";
+            const toggleLabel = stage.isExpanded
+              ? activeI18n.t("pipeline.preview.hideSubstages")
+              : activeI18n.t("pipeline.preview.showSubstages");
             const toggleSymbol = stage.isExpanded ? "-" : "+";
 
             return `
@@ -474,20 +493,28 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
                   y="${stage.y}"
                   width="${stage.width}"
                   height="${stage.height}"
-                  rx="18"
-                  ry="18"
+                  rx="7"
+                  ry="7"
                 ></rect>
                 <text class="pipeline-stage-meta" x="${stage.x - stage.width / 2 + 20}" y="${stage.y + 24}">
-                  STAGE
+                  ${escapeHtml(activeI18n.t("pipeline.preview.stageMeta"))}
                 </text>
                 <text class="pipeline-stage-count" x="${stage.x + stage.width / 2 - 22}" y="${stage.y + 25}">
                   ${stage.activeCount}
                 </text>
                 <g class="pipeline-stage-toggle" data-graph-stage-toggle="${escapeHtml(stage.id)}" tabindex="0" role="button" aria-label="${escapeHtml(toggleLabel)}">
-                  <rect x="${stage.x - stage.width / 2 + 18}" y="${toggleY}" width="150" height="28" rx="10"></rect>
+                  <rect x="${stage.x - stage.width / 2 + 18}" y="${toggleY}" width="150" height="28" rx="7"></rect>
                   <text x="${stage.x - stage.width / 2 + 34}" y="${toggleY + 19}">${toggleSymbol}</text>
                   <text x="${stage.x - stage.width / 2 + 54}" y="${toggleY + 19}">
-                    ${stage.isExpanded ? `${stage.substageCount} sub-stages` : `expand ${stage.substageCount}`}
+                    ${escapeHtml(
+                      stage.isExpanded
+                        ? activeI18n.t("pipeline.preview.substageCount", {
+                            count: activeI18n.formatNumber(stage.substageCount),
+                          })
+                        : activeI18n.t("pipeline.preview.expandCount", {
+                            count: activeI18n.formatNumber(stage.substageCount),
+                          })
+                    )}
                   </text>
                 </g>
               </g>
@@ -511,11 +538,15 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
                   y="${item.y - item.height / 2}"
                   width="${item.width}"
                   height="${item.height}"
-                  rx="14"
-                  ry="14"
+                  rx="7"
+                  ry="7"
                 ></rect>
                 <text class="pipeline-node-kicker" x="${item.x}" y="${item.y - item.height / 2 + 14}">
-                  ${item.node.kind === "stage" ? "Primary node" : "Sub-stage"}
+                  ${escapeHtml(
+                    item.node.kind === "stage"
+                      ? activeI18n.t("pipeline.preview.primaryNode")
+                      : activeI18n.t("pipeline.preview.subStage")
+                  )}
                 </text>
                 ${labelLines
                   .map(
@@ -531,7 +562,7 @@ function renderPipelineSvg(pipeline, applicants, expandedStageIds) {
                     ? ""
                     : `
                         <g class="pipeline-node-badge">
-                          <rect x="${item.x + item.width / 2 - 46}" y="${activeBadgeY - 14}" width="34" height="24" rx="9"></rect>
+                          <rect x="${item.x + item.width / 2 - 46}" y="${activeBadgeY - 14}" width="34" height="24" rx="7"></rect>
                           <text x="${item.x + item.width / 2 - 29}" y="${activeBadgeY + 3}">
                             ${item.activeCount}
                           </text>
@@ -551,9 +582,9 @@ function renderStudioStageCatalog(pipeline) {
   if (!pipeline.stageNodes.length) {
     return `
       <article class="applicant-empty compact-empty">
-        <span class="section-caption">No graph yet</span>
-        <h3>Add the first stage family.</h3>
-        <p>Start with a top-level stage, then add sub-stages and transition rules.</p>
+        <span class="section-caption">${activeI18n.t("pipeline.studio.emptyGraph.kicker")}</span>
+        <h3>${activeI18n.t("pipeline.studio.emptyGraph.title")}</h3>
+        <p>${activeI18n.t("pipeline.studio.emptyGraph.copy")}</p>
       </article>
     `;
   }
@@ -564,7 +595,7 @@ function renderStudioStageCatalog(pipeline) {
         <article class="stage-family-card">
           <div class="stage-family-head">
             <div>
-              <span class="section-caption">Stage family</span>
+              <span class="section-caption">${activeI18n.t("pipeline.family.title")}</span>
               <h3><i class="bi bi-signpost-2" aria-hidden="true"></i>${escapeHtml(stageNode.label)}</h3>
             </div>
             <button
@@ -573,11 +604,11 @@ function renderStudioStageCatalog(pipeline) {
               data-pipeline-remove-node="${escapeHtml(stageNode.id)}"
             >
               <i class="bi bi-trash3" aria-hidden="true"></i>
-              Remove
+              ${activeI18n.t("pipeline.actions.remove")}
             </button>
           </div>
           <p class="stage-family-copy">
-            ${escapeHtml(stageNode.description || "No description yet for this stage family.")}
+            ${escapeHtml(stageNode.description || activeI18n.t("pipeline.family.noDescription"))}
           </p>
           <div class="substage-stack">
             ${
@@ -588,7 +619,7 @@ function renderStudioStageCatalog(pipeline) {
                         <article class="substage-card">
                           <div class="substage-card-head">
                             <div>
-                              <span class="section-caption">Sub-stage</span>
+                              <span class="section-caption">${activeI18n.t("pipeline.domain.substage")}</span>
                               <strong><i class="bi bi-node-plus" aria-hidden="true"></i>${escapeHtml(child.label)}</strong>
                             </div>
                             <button
@@ -597,17 +628,17 @@ function renderStudioStageCatalog(pipeline) {
                               data-pipeline-remove-node="${escapeHtml(child.id)}"
                             >
                               <i class="bi bi-trash3" aria-hidden="true"></i>
-                              Remove
+                              ${activeI18n.t("pipeline.actions.remove")}
                             </button>
                           </div>
-                          <p>${escapeHtml(child.description || "No description yet for this sub-stage.")}</p>
+                          <p>${escapeHtml(child.description || activeI18n.t("pipeline.node.noDescription"))}</p>
                         </article>
                       `
                     )
                     .join("")
                 : `
                     <div class="rule-card empty">
-                      This stage family has no sub-stages yet.
+                      ${activeI18n.t("pipeline.family.noSubstages")}
                     </div>
                   `
             }
@@ -622,9 +653,9 @@ function renderStudioRuleCatalog(pipeline) {
   if (!pipeline.transitions.length) {
     return `
       <article class="applicant-empty compact-empty">
-        <span class="section-caption">No rules yet</span>
-        <h3>Add the first transition rule.</h3>
-        <p>Rules define when applicants branch, advance, loop back or converge.</p>
+        <span class="section-caption">${activeI18n.t("pipeline.studio.emptyRules.kicker")}</span>
+        <h3>${activeI18n.t("pipeline.studio.emptyRules.title")}</h3>
+        <p>${activeI18n.t("pipeline.studio.emptyRules.copy")}</p>
       </article>
     `;
   }
@@ -641,7 +672,7 @@ function renderStudioRuleCatalog(pipeline) {
               data-pipeline-remove-transition="${escapeHtml(transition.id)}"
             >
               <i class="bi bi-trash3" aria-hidden="true"></i>
-              Remove
+              ${activeI18n.t("pipeline.actions.remove")}
             </button>
           </div>
           <strong>${escapeHtml(transition.label)}</strong>
@@ -671,43 +702,60 @@ export function filterApplicants(applicants, filters, pipeline) {
   return applicants.filter((applicant) => applicantMatchesFilters(applicant, filters, pipeline));
 }
 
-export function renderApplicantSummary(root, applicants, filteredApplicants, pipeline) {
+export function renderApplicantSummary(root, applicants, filteredApplicants, pipeline, i18n) {
+  setActiveI18n(i18n);
   const activeNodes = new Set(filteredApplicants.map((applicant) => normalize(applicant.stage))).size;
   const scopeCopy = pipeline.isProgramSpecific
-    ? `${applicants.length} applicants in ${pipeline.activeProgramLabel}`
-    : `${applicants.length} total in current scope`;
+    ? activeI18n.t("applicants.summary.scope.program", {
+        count: activeI18n.formatNumber(applicants.length),
+        program: pipeline.activeProgramLabel,
+      })
+    : activeI18n.t("applicants.summary.scope.global", {
+        count: activeI18n.formatNumber(applicants.length),
+      });
 
   root.innerHTML = `
     <article class="summary-chip">
-      <span><i class="bi ${summaryIcon("applicants")}" aria-hidden="true"></i>Visible Applicants</span>
-      <strong>${filteredApplicants.length}</strong>
+      <span><i class="bi ${summaryIcon("applicants")}" aria-hidden="true"></i>${activeI18n.t(
+        "applicants.summary.visible"
+      )}</span>
+      <strong>${activeI18n.formatNumber(filteredApplicants.length)}</strong>
       <small>${escapeHtml(scopeCopy)}</small>
     </article>
     <article class="summary-chip">
-      <span><i class="bi ${summaryIcon("nodes")}" aria-hidden="true"></i>Active Nodes</span>
-      <strong>${activeNodes}</strong>
-      <small>${pipeline.nodes.length} configured in the graph</small>
+      <span><i class="bi ${summaryIcon("nodes")}" aria-hidden="true"></i>${activeI18n.t(
+        "applicants.summary.activeNodes"
+      )}</span>
+      <strong>${activeI18n.formatNumber(activeNodes)}</strong>
+      <small>${activeI18n.t("applicants.summary.nodesConfigured", {
+        count: activeI18n.formatNumber(pipeline.nodes.length),
+      })}</small>
     </article>
     <article class="summary-chip">
-      <span><i class="bi ${summaryIcon("branches")}" aria-hidden="true"></i>Branch Points</span>
-      <strong>${pipeline.branchingNodes.length}</strong>
-      <small>Nodes with more than one outgoing rule</small>
+      <span><i class="bi ${summaryIcon("branches")}" aria-hidden="true"></i>${activeI18n.t(
+        "applicants.summary.branchPoints"
+      )}</span>
+      <strong>${activeI18n.formatNumber(pipeline.branchingNodes.length)}</strong>
+      <small>${activeI18n.t("applicants.summary.branchNodes")}</small>
     </article>
     <article class="summary-chip">
-      <span><i class="bi ${summaryIcon("rules")}" aria-hidden="true"></i>Configured Rules</span>
-      <strong>${pipeline.transitions.length}</strong>
-      <small>Reusable transition logic across the pipeline</small>
+      <span><i class="bi ${summaryIcon("rules")}" aria-hidden="true"></i>${activeI18n.t(
+        "applicants.summary.configuredRules"
+      )}</span>
+      <strong>${activeI18n.formatNumber(pipeline.transitions.length)}</strong>
+      <small>${activeI18n.t("applicants.summary.ruleLogic")}</small>
     </article>
   `;
 }
 
-export function renderApplicantList(root, applicants, selectedId, pipeline) {
+export function renderApplicantList(root, applicants, selectedId, pipeline, i18n) {
+  setActiveI18n(i18n);
   if (!applicants.length) {
     root.innerHTML = `
       <article class="applicant-empty">
-        <span class="section-caption">No match</span>
-        <h3>No applicants match the current filters.</h3>
-        <p>Adjust the search term or filter values to recover the broader list.</p>
+        <span class="section-caption">${activeI18n.t("applicants.empty.noMatch.kicker")}</span>
+        <h3>${activeI18n.t("applicants.empty.noMatch.title")}</h3>
+        <p>${activeI18n.t("applicants.empty.noMatch.copy")}</p>
       </article>
     `;
     return;
@@ -726,16 +774,23 @@ export function renderApplicantList(root, applicants, selectedId, pipeline) {
           data-applicant-select="${applicant.id}"
         >
           <div class="applicant-card-top">
-            <span class="applicant-program">${escapeHtml(applicant.program)}</span>
-            <span class="score-pill score-${band}">${applicant.score}</span>
+            <span class="applicant-program badge badge-md">${escapeHtml(applicant.program)}</span>
+            <span class="score-pill badge badge-sm score-${band}">${activeI18n.formatNumber(
+              applicant.score
+            )}</span>
           </div>
           <div class="applicant-card-head">
             <strong>${escapeHtml(applicant.full_name)}</strong>
             <span class="mono-inline">${escapeHtml(applicant.email)}</span>
+            <span class="applicant-card-trigger" aria-hidden="true">
+              <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </span>
           </div>
           <div class="applicant-card-meta">
-            <span class="status-pill tone-${tone}">${escapeHtml(applicant.status)}</span>
-            <span class="stage-pill">${escapeHtml(formatStageLabel(applicant.stage, pipeline))}</span>
+            <span class="status-pill badge badge-sm tone-${tone}">${escapeHtml(
+              activeI18n.localizeApplicantStatus(applicant.status)
+            )}</span>
+            <span class="stage-pill badge badge-sm">${escapeHtml(formatStageLabel(applicant.stage, pipeline))}</span>
           </div>
         </button>
       `;
@@ -743,13 +798,14 @@ export function renderApplicantList(root, applicants, selectedId, pipeline) {
     .join("");
 }
 
-export function renderApplicantSpotlight(root, applicant, pipeline) {
+export function renderApplicantSpotlight(root, applicant, pipeline, i18n) {
+  setActiveI18n(i18n);
   if (!applicant) {
     root.innerHTML = `
-      <div class="panel-kicker">Spotlight</div>
-      <h2>Applicant focus</h2>
+      <div class="panel-kicker">${activeI18n.t("applicants.spotlight.kicker")}</div>
+      <h2>${activeI18n.t("applicants.spotlight.emptyTitle")}</h2>
       <p class="control-note">
-        Select an applicant from the queue to inspect the current node, eligible next steps and incoming rules.
+        ${activeI18n.t("applicants.spotlight.emptyCopy")}
       </p>
     `;
     return;
@@ -758,15 +814,18 @@ export function renderApplicantSpotlight(root, applicant, pipeline) {
   const currentNode = getPipelineNodeByStageValue(applicant.stage, pipeline);
   const outgoingTransitions = currentNode ? pipeline.transitionsByFrom.get(currentNode.id) ?? [] : [];
   const incomingTransitions = currentNode ? pipeline.transitionsByTo.get(currentNode.id) ?? [] : [];
-  const stageFamily = currentNode?.parent?.label ?? currentNode?.label ?? "Unmapped stage";
+  const stageFamily =
+    currentNode?.parent?.label ??
+    currentNode?.label ??
+    activeI18n.t("applicants.spotlight.unmappedStage");
   const spotlightCopy = currentNode
     ? currentNode.description ||
-      "This node exists in the graph but still needs a richer operational description."
-    : "This applicant currently sits on a stage label that is not mapped in the graph yet.";
+      activeI18n.t("applicants.spotlight.nodeNeedsDescription")
+    : activeI18n.t("applicants.spotlight.unmappedNodeCopy");
 
   root.innerHTML = `
-    <div class="panel-kicker">Spotlight</div>
-    <span class="spotlight-program">${escapeHtml(applicant.program)}</span>
+    <div class="panel-kicker">${activeI18n.t("applicants.spotlight.kicker")}</div>
+    <span class="spotlight-program badge badge-md">${escapeHtml(applicant.program)}</span>
     <h2>${escapeHtml(applicant.full_name)}</h2>
     <p class="spotlight-copy">
       ${escapeHtml(spotlightCopy)}
@@ -774,49 +833,53 @@ export function renderApplicantSpotlight(root, applicant, pipeline) {
 
     <div class="spotlight-metrics">
       <article>
-        <span>Stage</span>
+        <span>${activeI18n.t("applicants.spotlight.stage")}</span>
         <strong>${escapeHtml(formatStageLabel(applicant.stage, pipeline))}</strong>
       </article>
       <article>
-        <span>Stage Family</span>
+        <span>${activeI18n.t("applicants.spotlight.stageFamily")}</span>
         <strong>${escapeHtml(stageFamily)}</strong>
       </article>
       <article>
-        <span>Status</span>
-        <strong>${escapeHtml(applicant.status)}</strong>
+        <span>${activeI18n.t("applicants.spotlight.status")}</span>
+        <strong>${escapeHtml(activeI18n.localizeApplicantStatus(applicant.status))}</strong>
       </article>
       <article>
-        <span>Score</span>
-        <strong class="mono-inline">${applicant.score}</strong>
+        <span>${activeI18n.t("applicants.spotlight.score")}</span>
+        <strong class="mono-inline">${activeI18n.formatNumber(applicant.score)}</strong>
       </article>
       <article>
-        <span>Email</span>
+        <span>${activeI18n.t("applicants.spotlight.email")}</span>
         <strong class="mono-inline">${escapeHtml(applicant.email)}</strong>
       </article>
       <article>
-        <span>Created</span>
-        <strong>${escapeHtml(applicant.created_at)}</strong>
+        <span>${activeI18n.t("applicants.spotlight.created")}</span>
+        <strong>${escapeHtml(activeI18n.formatDate(applicant.created_at))}</strong>
       </article>
     </div>
 
     <div class="route-cluster-grid">
       <article class="route-cluster">
-        <span class="section-caption"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i>Eligible Next Steps</span>
+        <span class="section-caption"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i>${activeI18n.t(
+          "applicants.spotlight.nextSteps"
+        )}</span>
         <div class="rule-card-stack">
           ${renderTransitionCards(
             outgoingTransitions,
             "toNode",
-            "No outgoing rules are configured for this node yet."
+            activeI18n.t("pipeline.node.noOutgoing")
           )}
         </div>
       </article>
       <article class="route-cluster">
-        <span class="section-caption"><i class="bi bi-arrow-down-left-circle" aria-hidden="true"></i>Can Arrive From</span>
+        <span class="section-caption"><i class="bi bi-arrow-down-left-circle" aria-hidden="true"></i>${activeI18n.t(
+          "applicants.spotlight.arriveFrom"
+        )}</span>
         <div class="rule-card-stack">
           ${renderTransitionCards(
             incomingTransitions,
             "fromNode",
-            "No inbound rules are configured for this node yet."
+            activeI18n.t("pipeline.node.noInbound")
           )}
         </div>
       </article>
@@ -824,13 +887,14 @@ export function renderApplicantSpotlight(root, applicant, pipeline) {
   `;
 }
 
-export function renderApplicantPipeline(root, applicants, pipeline, options = {}) {
+export function renderApplicantPipeline(root, applicants, pipeline, i18n, options = {}) {
+  setActiveI18n(i18n);
   if (!pipeline.nodes.length) {
     root.innerHTML = `
       <article class="applicant-empty">
-        <span class="section-caption">Graph empty</span>
-        <h3>No pipeline nodes are configured.</h3>
-        <p>Add at least one top-level stage in the studio to define how applicants move.</p>
+        <span class="section-caption">${activeI18n.t("applicants.empty.graph.kicker")}</span>
+        <h3>${activeI18n.t("applicants.empty.graph.title")}</h3>
+        <p>${activeI18n.t("applicants.empty.graph.copy")}</p>
       </article>
     `;
     return;
@@ -851,8 +915,10 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
     )
     .join("");
   const versionScopeCopy = pipeline.isProgramSpecific
-    ? `Viewing the ${pipeline.activeProgramLabel} flow version and applicants scoped to that program.`
-    : "Viewing the global default flow version across all programs.";
+    ? activeI18n.t("pipeline.preview.scope.program", {
+        program: pipeline.activeProgramLabel,
+      })
+    : activeI18n.t("pipeline.preview.scope.global");
 
   for (const transition of pipeline.transitions) {
     if (!directionSet.includes(transition.direction)) {
@@ -864,12 +930,12 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
     <section class="pipeline-visual-shell">
       <div class="pipeline-map-header">
         <div class="pipeline-map-copy">
-          <span class="section-caption">Graph Preview</span>
-          <h3><i class="bi bi-diagram-3" aria-hidden="true"></i>Applicant Flow Map</h3>
+          <span class="section-caption">${activeI18n.t("pipeline.preview.kicker")}</span>
+          <h3><i class="bi bi-diagram-3" aria-hidden="true"></i>${activeI18n.t(
+            "pipeline.preview.title"
+          )}</h3>
           <p>
-            This view emphasizes how stage families branch, converge and loop back. The SVG map is a quick
-            structural read; use each stage toggle inside the canvas to reveal sub-stages and the accordions
-            below for the detailed rule inventory.
+            ${activeI18n.t("pipeline.preview.copy")}
           </p>
           <div class="version-note">
             <i class="bi bi-folder2-open" aria-hidden="true"></i>
@@ -878,15 +944,15 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
         </div>
         <div class="pipeline-map-controls">
           <label class="field pipeline-program-switcher">
-            Flow Version
+            ${activeI18n.t("pipeline.preview.flowVersion")}
             <select data-pipeline-program-select>
               ${programOptions}
             </select>
           </label>
           <div class="pipeline-legend">
-          <span class="legend-pill"><i class="bi bi-signpost-2" aria-hidden="true"></i>Top-level stage</span>
-          <span class="legend-pill"><i class="bi bi-node-plus" aria-hidden="true"></i>Sub-stage</span>
-          <span class="legend-pill"><i class="bi bi-person-badge" aria-hidden="true"></i>Badge = active applicants</span>
+          <span class="legend-pill badge badge-sm"><i class="bi bi-signpost-2" aria-hidden="true"></i>${activeI18n.t("pipeline.preview.topLevelStage")}</span>
+          <span class="legend-pill badge badge-sm"><i class="bi bi-node-plus" aria-hidden="true"></i>${activeI18n.t("pipeline.preview.subStage")}</span>
+          <span class="legend-pill badge badge-sm"><i class="bi bi-person-badge" aria-hidden="true"></i>${activeI18n.t("pipeline.preview.badgeApplicants")}</span>
           </div>
         </div>
       </div>
@@ -894,11 +960,10 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
       <div class="pipeline-direction-legend">
         ${directionSet
           .map((direction) => {
-            const label =
-              transitionDirectionCatalog.find((item) => item.value === direction)?.label ?? direction;
+            const label = activeI18n.localizeDirection(direction);
 
             return `
-              <span class="direction-pill direction-${escapeHtml(direction)}">
+              <span class="direction-pill badge badge-sm direction-${escapeHtml(direction)}">
                 <i class="bi ${transitionIcon(direction)}" aria-hidden="true"></i>
                 ${escapeHtml(label)}
               </span>
@@ -928,17 +993,17 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
                     <i class="bi bi-signpost-2" aria-hidden="true"></i>
                   </div>
                   <div class="pipeline-family-summary-copy">
-                    <span class="section-caption">Stage family</span>
+                    <span class="section-caption">${activeI18n.t("pipeline.family.title")}</span>
                     <h3>${escapeHtml(stageNode.label)}</h3>
                     <p>${escapeHtml(
-                      stageNode.description || "No description yet for this stage family."
+                      stageNode.description || activeI18n.t("pipeline.family.noDescription")
                     )}</p>
                   </div>
                 </div>
                 <div class="pipeline-family-badges">
-                  <span class="legend-pill"><i class="bi bi-people" aria-hidden="true"></i>${familyApplicants.length} active</span>
-                  <span class="legend-pill"><i class="bi bi-layers" aria-hidden="true"></i>${familyNodes.length} nodes</span>
-                  <span class="legend-pill"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>${familyRuleCount} rules</span>
+                  <span class="legend-pill badge badge-sm"><i class="bi bi-people" aria-hidden="true"></i>${activeI18n.t("pipeline.status.active", { count: activeI18n.formatNumber(familyApplicants.length) })}</span>
+                  <span class="legend-pill badge badge-sm"><i class="bi bi-layers" aria-hidden="true"></i>${activeI18n.t("pipeline.status.nodes", { count: activeI18n.formatNumber(familyNodes.length) })}</span>
+                  <span class="legend-pill badge badge-sm"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>${activeI18n.t("pipeline.status.rules", { count: activeI18n.formatNumber(familyRuleCount) })}</span>
                   <span class="family-toggle"><i class="bi bi-chevron-down" aria-hidden="true"></i></span>
                 </div>
               </summary>
@@ -959,37 +1024,37 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
                             <div>
                               <span class="section-caption">
                                 <i class="bi ${stageIcon(node.kind)}" aria-hidden="true"></i>
-                                ${node.kind === "stage" ? "Stage" : "Sub-stage"}
+                                ${activeI18n.localizeNodeKind(node.kind)}
                               </span>
                               <h4>${escapeHtml(node.label)}</h4>
                             </div>
-                            <strong>${exactApplicants}</strong>
+                            <strong>${activeI18n.formatNumber(exactApplicants)}</strong>
                           </div>
                           <p class="graph-node-copy">
-                            ${escapeHtml(node.description || "No description yet for this node.")}
+                            ${escapeHtml(node.description || activeI18n.t("pipeline.node.noDescription"))}
                           </p>
                           <div class="graph-node-meta">
-                            <span><i class="bi bi-arrow-down-left-circle" aria-hidden="true"></i>${incomingTransitions.length} in</span>
-                            <span><i class="bi bi-arrow-right-circle" aria-hidden="true"></i>${outgoingTransitions.length} out</span>
-                            <span><i class="bi bi-person-badge" aria-hidden="true"></i>${exactApplicants} active</span>
+                            <span><i class="bi bi-arrow-down-left-circle" aria-hidden="true"></i>${activeI18n.t("pipeline.node.inCount", { count: activeI18n.formatNumber(incomingTransitions.length) })}</span>
+                            <span><i class="bi bi-arrow-right-circle" aria-hidden="true"></i>${activeI18n.t("pipeline.node.outCount", { count: activeI18n.formatNumber(outgoingTransitions.length) })}</span>
+                            <span><i class="bi bi-person-badge" aria-hidden="true"></i>${activeI18n.t("pipeline.node.activeCount", { count: activeI18n.formatNumber(exactApplicants) })}</span>
                           </div>
                           <div class="graph-route-group">
-                            <span class="section-caption">Routes Out</span>
+                            <span class="section-caption">${activeI18n.t("pipeline.node.routesOut")}</span>
                             <div class="graph-link-stack">
                               ${renderNodeRouteList(
                                 outgoingTransitions,
                                 "toNode",
-                                "No outgoing rules yet."
+                                activeI18n.t("pipeline.node.noOutgoing")
                               )}
                             </div>
                           </div>
                           <div class="graph-route-group">
-                            <span class="section-caption">Routes In</span>
+                            <span class="section-caption">${activeI18n.t("pipeline.node.routesIn")}</span>
                             <div class="graph-link-stack">
                               ${renderNodeRouteList(
                                 incomingTransitions,
                                 "fromNode",
-                                "No inbound rules yet."
+                                activeI18n.t("pipeline.node.noInbound")
                               )}
                             </div>
                           </div>
@@ -1007,7 +1072,10 @@ export function renderApplicantPipeline(root, applicants, pipeline, options = {}
   `;
 }
 
-export function renderApplicantPipelineStudio(root, pipeline) {
+export function renderApplicantPipelineStudio(root, pipeline, i18n) {
+  setActiveI18n(i18n);
+  const nodeKindOptions = getNodeKindOptions(activeI18n);
+  const transitionDirectionOptions = getTransitionDirectionOptions(activeI18n);
   const stageParentOptions = pipeline.stageNodes
     .map(
       (stageNode) => `
@@ -1041,35 +1109,47 @@ export function renderApplicantPipelineStudio(root, pipeline) {
           aria-pressed="${programVersion.id === pipeline.activeProgramId ? "true" : "false"}"
         >
           <span class="section-caption">${
-            programVersion.type === "global" ? "Global default" : "Program version"
+            programVersion.type === "global"
+              ? `<i class="bi bi-diagram-3" aria-hidden="true"></i>${activeI18n.t(
+                  "pipeline.studio.globalDefault"
+                )}`
+              : `<i class="bi bi-buildings" aria-hidden="true"></i>${activeI18n.t(
+                  "pipeline.studio.programVersion"
+                )}`
           }</span>
           <strong>${escapeHtml(programVersion.label)}</strong>
           <small>
-            ${programVersion.stageCount} stages / ${programVersion.transitionCount} rules /
-            ${programVersion.nodeCount} nodes
+            ${activeI18n.t("pipeline.studio.statsSummary", {
+              stages: activeI18n.formatNumber(programVersion.stageCount),
+              rules: activeI18n.formatNumber(programVersion.transitionCount),
+              nodes: activeI18n.formatNumber(programVersion.nodeCount),
+            })}
           </small>
         </button>
       `
     )
     .join("");
   const versionCopy = pipeline.isProgramSpecific
-    ? `You are editing the program-specific version for ${pipeline.activeProgramLabel}.`
-    : "You are editing the global default flow that programs can clone and specialize.";
+    ? activeI18n.t("pipeline.studio.version.program", {
+        program: pipeline.activeProgramLabel,
+      })
+    : activeI18n.t("pipeline.studio.version.global");
 
   root.innerHTML = `
     <details class="subpanel pipeline-studio-shell">
       <summary class="pipeline-studio-summary">
         <div class="pipeline-studio-summary-copy">
-          <span class="panel-kicker">Pipeline Studio</span>
-          <h2><i class="bi bi-sliders2-vertical" aria-hidden="true"></i>Edit graph configuration</h2>
+          <span class="panel-kicker">${activeI18n.t("pipeline.studio.title")}</span>
+          <h2><i class="bi bi-sliders2-vertical" aria-hidden="true"></i>${activeI18n.t(
+            "pipeline.studio.editTitle"
+          )}</h2>
           <p>
-            Full-width editing panel for stages, sub-stages and transition rules. Collapse it when you want
-            to focus only on the flow view.
+            ${activeI18n.t("pipeline.studio.editCopy")}
           </p>
         </div>
         <div class="pipeline-family-badges">
-          <span class="legend-pill"><i class="bi bi-layers" aria-hidden="true"></i>${pipeline.nodes.length} nodes</span>
-          <span class="legend-pill"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>${pipeline.transitions.length} rules</span>
+          <span class="legend-pill badge badge-sm"><i class="bi bi-layers" aria-hidden="true"></i>${activeI18n.t("pipeline.status.nodes", { count: activeI18n.formatNumber(pipeline.nodes.length) })}</span>
+          <span class="legend-pill badge badge-sm"><i class="bi bi-sign-turn-right" aria-hidden="true"></i>${activeI18n.t("pipeline.status.rules", { count: activeI18n.formatNumber(pipeline.transitions.length) })}</span>
           <span class="family-toggle"><i class="bi bi-chevron-down" aria-hidden="true"></i></span>
         </div>
       </summary>
@@ -1077,33 +1157,32 @@ export function renderApplicantPipelineStudio(root, pipeline) {
       <div class="pipeline-studio-content">
         <div class="panel-header">
           <div>
-            <span class="panel-kicker">Pipeline Studio</span>
-            <h2>Graph configuration</h2>
+            <span class="panel-kicker">${activeI18n.t("pipeline.studio.title")}</span>
+            <h2>${activeI18n.t("pipeline.studio.graphConfiguration")}</h2>
           </div>
           <button class="ghost-button" type="button" data-pipeline-reset>
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            Reset all versions
+            ${activeI18n.t("pipeline.studio.resetAllVersions")}
           </button>
         </div>
 
         <p class="control-note">
-          The pipeline is modeled as a graph. Stages, sub-stages and rule-based transitions can branch,
-          converge or move backward without forcing a linear order, and each program can own its own version.
+          ${activeI18n.t("pipeline.studio.graphCopy")}
         </p>
         <p class="control-note">${escapeHtml(versionCopy)}</p>
 
         <div class="studio-version-grid">
           <article class="studio-catalog">
-            <div class="section-caption">Flow Versions</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.flowVersions")}</div>
             <div class="version-card-grid">
               ${versionCards}
             </div>
           </article>
 
           <form class="studio-form" data-pipeline-form="program">
-            <div class="section-caption">Create Program Version</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.createProgramVersion")}</div>
             <label>
-              Program name
+              ${activeI18n.t("pipeline.studio.programName")}
               <input
                 name="program_name"
                 type="text"
@@ -1112,29 +1191,34 @@ export function renderApplicantPipelineStudio(root, pipeline) {
               />
             </label>
             <label>
-              Clone from
+              ${activeI18n.t("pipeline.studio.cloneFrom")}
               <select name="source_program_id">
                 ${sourceProgramOptions}
               </select>
             </label>
             <button class="primary-button" type="submit">
               <i class="bi bi-diagram-2" aria-hidden="true"></i>
-              Create version
+              ${activeI18n.t("pipeline.studio.createVersion")}
             </button>
           </form>
         </div>
 
         <div class="studio-form-grid">
           <form class="studio-form" data-pipeline-form="node">
-            <div class="section-caption">Add Stage Node</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.addStageNode")}</div>
             <label>
-              Label
-              <input name="label" type="text" placeholder="Scholarship Review" required />
+              ${activeI18n.t("pipeline.studio.label")}
+              <input
+                name="label"
+                type="text"
+                placeholder="${escapeHtml(activeI18n.t("pipeline.studio.placeholder.nodeLabel"))}"
+                required
+              />
             </label>
             <label>
-              Node type
+              ${activeI18n.t("pipeline.studio.nodeType")}
               <select name="kind">
-                ${nodeKindCatalog
+                ${nodeKindOptions
                   .map(
                     (item) => `
                       <option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>
@@ -1144,50 +1228,55 @@ export function renderApplicantPipelineStudio(root, pipeline) {
               </select>
             </label>
             <label>
-              Parent stage
+              ${activeI18n.t("pipeline.studio.parentStage")}
               <select name="parent_id">
-                <option value="">Choose a parent stage</option>
+                <option value="">${activeI18n.t("pipeline.studio.chooseParentStage")}</option>
                 ${stageParentOptions}
               </select>
             </label>
             <label>
-              Description
+              ${activeI18n.t("pipeline.studio.description")}
               <input
                 name="description"
                 type="text"
-                placeholder="Operational context for this node"
+                placeholder="${escapeHtml(activeI18n.t("pipeline.studio.placeholder.description"))}"
               />
             </label>
             <button class="primary-button" type="submit">
               <i class="bi bi-plus-circle" aria-hidden="true"></i>
-              Add node
+              ${activeI18n.t("pipeline.studio.addNode")}
             </button>
           </form>
 
           <form class="studio-form" data-pipeline-form="transition">
-            <div class="section-caption">Add Rule</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.addRule")}</div>
             <label>
-              Rule label
-              <input name="label" type="text" placeholder="Escalate to committee" required />
+              ${activeI18n.t("pipeline.studio.ruleLabel")}
+              <input
+                name="label"
+                type="text"
+                placeholder="${escapeHtml(activeI18n.t("pipeline.studio.placeholder.ruleLabel"))}"
+                required
+              />
             </label>
             <label>
-              Source node
+              ${activeI18n.t("pipeline.studio.sourceNode")}
               <select name="from" ${nodeOptions ? "" : "disabled"}>
-                <option value="">Choose the source node</option>
+                <option value="">${activeI18n.t("pipeline.studio.chooseSourceNode")}</option>
                 ${nodeOptions}
               </select>
             </label>
             <label>
-              Destination node
+              ${activeI18n.t("pipeline.studio.destinationNode")}
               <select name="to" ${nodeOptions ? "" : "disabled"}>
-                <option value="">Choose the destination node</option>
+                <option value="">${activeI18n.t("pipeline.studio.chooseDestinationNode")}</option>
                 ${nodeOptions}
               </select>
             </label>
             <label>
-              Direction
+              ${activeI18n.t("pipeline.studio.direction")}
               <select name="direction">
-                ${transitionDirectionCatalog
+                ${transitionDirectionOptions
                   .map(
                     (item) => `
                       <option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>
@@ -1197,34 +1286,34 @@ export function renderApplicantPipelineStudio(root, pipeline) {
               </select>
             </label>
             <label>
-              Condition
+              ${activeI18n.t("pipeline.studio.condition")}
               <input
                 name="condition"
                 type="text"
-                placeholder="Explain the decision rule or trigger"
+                placeholder="${escapeHtml(activeI18n.t("pipeline.studio.placeholder.condition"))}"
                 required
               />
             </label>
             <button class="primary-button" type="submit">
               <i class="bi bi-sign-turn-right" aria-hidden="true"></i>
-              Add rule
+              ${activeI18n.t("pipeline.studio.addRuleAction")}
             </button>
           </form>
         </div>
 
         <p id="pipeline-config-message" class="form-message" data-tone="muted" aria-live="polite">
-          Configure the graph and the rest of the module will inherit it.
+          ${activeI18n.t("pipeline.messages.default")}
         </p>
 
         <div class="studio-catalog-grid">
           <article class="studio-catalog">
-            <div class="section-caption">Stage Families</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.stageFamilies")}</div>
             <div class="stage-family-stack">
               ${renderStudioStageCatalog(pipeline)}
             </div>
           </article>
           <article class="studio-catalog">
-            <div class="section-caption">Transition Rules</div>
+            <div class="section-caption">${activeI18n.t("pipeline.studio.transitionRules")}</div>
             <div class="studio-rule-stack">
               ${renderStudioRuleCatalog(pipeline)}
             </div>
